@@ -22,25 +22,61 @@ exports.getLifetimeAnalytics = async (req, res) => {
   try {
     const client = pinterestClient(req.user.accessToken);
 
-    // Calculate dates - Max 90 days back from today
+    // Calculate 90-day range
     const today = new Date();
-    const maxDaysBack = 89; // 90 days total including today
+    const maxDaysBack = 89;
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - maxDaysBack);
 
     const formattedStartDate = startDate.toISOString().split('T')[0];
     const formattedEndDate = today.toISOString().split('T')[0];
 
-    const { data } = await client.get('/user_account/analytics', {
+    const metrics = [
+      'TOTAL_AUDIENCE',
+      'ENGAGED_AUDIENCE',
+      'IMPRESSION',
+      'CLICKTHROUGH',
+      'ENGAGEMENT',
+      'PIN_CLICK',
+      'SAVE',
+      'SAVE_RATE',
+      'OUTBOUND_CLICK_RATE',
+      'OUTBOUND_CLICK',
+      'VIDEO_V50_WATCH_TIME',
+      'QUARTILE_95_PERCENT_VIEW',
+      'VIDEO_MRC_VIEW',
+      'VIDEO_AVG_WATCH_TIME',
+      'VIDEO_START',
+      'VIDEO_10S_VIEW',
+      'PIN_CLICK_RATE',
+      'ENGAGEMENT_RATE'
+    ].join(',');
+
+    // 📊 Lifetime (Total) data
+    const totalRes = await client.get('/user_account/analytics', {
       params: {
-        metrics: 'TOTAL_AUDIENCE,ENGAGED_AUDIENCE,IMPRESS   ION,CLICKTHROUGH,ENGAGEMENT',
+        metrics,
         start_date: formattedStartDate,
         end_date: formattedEndDate,
         granularity: 'TOTAL'
       }
     });
 
-    res.status(200).json(data);
+    // 📆 Daily data
+    const dailyRes = await client.get('/user_account/analytics', {
+      params: {
+        metrics,
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
+        granularity: 'DAY'
+      }
+    });
+
+    res.status(200).json({
+      summary_metrics: totalRes.data,
+      daily_metrics: dailyRes.data?.all_metrics || [] // in case Pinterest responds with .all_metrics
+    });
+
   } catch (error) {
     if (error.response) {
       console.error('Pinterest API Error:', {
@@ -55,6 +91,7 @@ exports.getLifetimeAnalytics = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Fetch between specific dates
 exports.getAnalyticsByDateRange = async (req, res) => {

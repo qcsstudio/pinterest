@@ -23,4 +23,4 @@ app.use('/auth', authRoutes);
 app.use('/pins', pinsRoutes);
 app.use('/analytics', analyticsRoutes);
 
-app.listen(5000, () => console.log('Server running on http://localhost:5000'));
+app.listen(7000, () => console.log('Server running on http://localhost:7000'));
